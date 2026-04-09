@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>職場健康服務年度計畫甘特圖</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+/* 樣式保留與優化 */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --sw:295px; --acc:#3d6e94;--acc2:#2c5070;--accl:#dcedf7;
+  --hbg:#2c4a62;--sbg:#3d6e94; --bdr:#c0d0da;--text:#1a2b38;--muted:#5a7080; --done:#27ae60;
+}
+body{font-family:'Noto Sans TC','Microsoft JhengHei',sans-serif;font-size:13px;color:var(--text);background:#eaf0f5;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+
+/* TOPBAR */
+.topbar{background:var(--hbg);color:#fff;padding:8px 14px;display:flex;align-items:center;gap:8px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+.tb-title{font-size:13px;font-weight:700;flex:1;}
+.yr-wrap{display:flex;align-items:center;gap:5px;background:rgba(0,0,0,.2);padding:2px 8px;border-radius:4px;}
+.yr-btn{width:22px;height:22px;background:none;border:1px solid rgba(255,255,255,.3);border-radius:4px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;}
+.yr-num{font-size:15px;font-weight:700;min-width:40px;text-align:center;}
+.tb-btn{padding:5px 9px;border-radius:4px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;cursor:pointer;font-size:11px;white-space:nowrap;}
+.tb-btn:hover{background:rgba(255,255,255,.2);}
+.tb-btn.prim{background:rgba(255,255,255,.9);color:var(--hbg);font-weight:700;}
+.tb-btn.danger{color:#ffb3b3;border-color:rgba(255,100,100,.4);}
+
+/* PROJECT SELECTOR */
+.proj-select{padding:4px;border-radius:4px;background:#fff;color:var(--text);font-size:11px;max-width:140px;outline:none;border:none;}
+
+/* LAYOUT */
+.main{display:flex;flex:1;overflow:hidden;}
+.sidebar{width:var(--sw);min-width:var(--sw);background:#fff;border-right:1px solid var(--bdr);display:flex;flex-direction:column;}
+.sb-hdr{padding:10px 12px;border-bottom:1px solid var(--bdr);background:#f3f7fa;display:flex;align-items:center;justify-content:space-between;}
+.sb-scroll{flex:1;overflow-y:auto;}
+.pitem{display:flex;align-items:center;padding:8px 12px;gap:8px;border-bottom:1px solid #eee;cursor:pointer;}
+.pitem.active{background:#eef6ff;}
+.pitem-cb{width:14px;height:14px;border:1.5px solid #ccc;border-radius:3px;}
+.pitem-cb.on{background:var(--acc);border-color:var(--acc);}
+
+/* GANTT */
+.g-wrap-outer{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.gantt-wrap{flex:1;overflow:auto;background:#fff;position:relative;}
+table.gt{border-collapse:collapse;table-layout:fixed;background:white;width:100%;}
+table.gt th,table.gt td{border:1px solid var(--bdr);padding:4px;vertical-align:middle;}
+.th1{background:var(--hbg);color:#fff;font-size:10px;text-align:center;}
+.th2{background:var(--sbg);color:#fff;font-size:9px;text-align:center;}
+.cd-month{height:35px;position:relative;cursor:pointer;}
+.mo-plan{position:absolute;top:5px;left:2px;right:2px;height:10px;border-radius:2px;background:var(--acc);opacity:0.5;}
+.mo-done{position:absolute;bottom:5px;left:2px;right:2px;height:10px;border-radius:2px;background:var(--done);}
+
+/* MODALS */
+.modal-bg, .rename-bg, .disc-bg {display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9000;align-items:center;justify-content:center;}
+.open{display:flex !important;}
+.m-card{background:#fff;padding:25px;border-radius:12px;width:400px;box-shadow:0 10px 30px rgba(0,0,0,.2);}
+
+/* FOOTER */
+.site-footer{background:var(--hbg);color:rgba(255,255,255,.6);font-size:10px;text-align:center;padding:6px;border-top:1px solid rgba(255,255,255,.1);}
+.site-footer a{color:#fff;text-decoration:none;font-weight:700;}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-title" id="mainTitle" contenteditable="true">勞工健康服務年度計畫管理系統</div>
+  
+  <select class="proj-select" id="projSelect" onchange="switchProj(this.value)"></select>
+  <button class="tb-btn" onclick="newProj()">＋ 新專案</button>
+  <button class="tb-btn" onclick="cloneProj()">⎘ 複製</button>
+  <button class="tb-btn danger" onclick="deleteProj()">🗑 刪除</button>
+  <button class="tb-btn" onclick="resetToMasterTemplate()" title="還原至代碼定義的最新預設計畫">♻️ 重置範本</button>
+
+  <div class="yr-wrap">
+    <button class="yr-btn" onclick="chgYear(-1)">◀</button>
+    <div class="yr-num" id="yrNum">2026</div>
+    <button class="yr-btn" onclick="chgYear(1)">▶</button>
+  </div>
+  
+  <button class="tb-btn prim" id="pdfBtn" onclick="exportPDF()">📄 匯出 PDF</button>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sb-hdr"><b id="sidebarTitle" contenteditable="true">計畫清單</b> <button class="tb-btn" style="color:var(--acc)" onclick="openModal()">＋ 新增項目</button></div>
+    <div class="sb-scroll" id="sbList"></div>
+  </div>
+  <div class="g-wrap-outer">
+    <div id="ganttWrap" class="gantt-wrap"></div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  僅供個人及學術交流使用，嚴禁商業營利 · 商業授權需求請洽：<a href="https://www.instagram.com/occu.patient/" target="_blank">@occu.patient</a>
+</footer>
+
+<div id="discBg" class="disc-bg">
+  <div class="m-card">
+    <h3 style="color:#c0392b; margin-bottom:12px;">⚠️ 使用者同意條款</h3>
+    <p style="font-size:12px; line-height:1.6; color:#444; margin-bottom:20px;">
+      1. <b>資料安全</b>：資料僅存於您的瀏覽器快取中。請勿輸入員工姓名或身分證號。<br>
+      2. <b>法律效力</b>：本工具僅供行政輔助參考。業務執行應以勞動部最新公告法規為準。<br>
+      3. <b>責任限制</b>：本工具嚴禁商業營利。作者不對使用結果產生的資料損失或法律責任負責。
+    </p>
+    <button onclick="discAgree()" style="width:100%; padding:10px; background:var(--hbg); color:#fff; border:none; border-radius:6px; cursor:pointer; font-weight:700;">我已閱讀並同意進入</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// /* ===== 這裡修改預設計畫內容 ===== */
+// ══════════════════════════════════════════════════════════
+const MASTER_TEMPLATE = [
+  { id:1, cat:'行政管理', name:'年度計畫討論與制定', method:'制定本年度計畫', months:[1], checked:true, color:0, pers:['職安'], target:'全員', prog:{} },
+  { id:2, cat:'健康檢查', name:'一般體格檢查', method:'新進員工健檢', months:[1,2,3,4,5,6,7,8,9,10,11,12], checked:true, color:1, pers:['職安'], target:'新進人員', prog:{} },
+  { id:3, cat:'四大計畫', name:'母性健康保護管理', method:'女性員工健康評估', months:[1,2,3,4,5,6,7,8,9,10,11,12], checked:true, color:2, pers:['特約醫護'], target:'女性員工', prog:{} },
+  { id:4, cat:'健康促進', name:'職場健康活動', method:'辦理各類促進活動', months:[3,6,9,12], checked:false, color:4, pers:['職安'], target:'全員', prog:{} }
+];
+// ══════════════════════════════════════════════════════════
+
+// ═══════════ 資料引擎 ═══════════
+const THIS_YEAR = new Date().getFullYear();
+const STORAGE_KEY = 'gp_multi_v3';
+
+let _store = (function(){
+    let s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(!s) {
+        s = { current: "預設專案", projects: { "預設專案": { year: THIS_YEAR, items: JSON.parse(JSON.stringify(MASTER_TEMPLATE)), nid: 10 } } };
+    }
+    return s;
+})();
+
+let curProjName = _store.current;
+let projects = _store.projects[curProjName].items;
+let curYear = _store.projects[curProjName].year || THIS_YEAR;
+let nid = _store.projects[curProjName].nid || 10;
+
+function saveStore() {
+    _store.projects[curProjName] = { year: curYear, items: projects, nid: nid };
+    _store.current = curProjName;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(_store));
+}
+
+// ═══════════ 專案管理邏輯 ═══════════
+function renderProjSelect() {
+    const sel = document.getElementById('projSelect');
+    sel.innerHTML = Object.keys(_store.projects).map(n => `<option value="${n}" ${n===curProjName?'selected':''}>${n}</option>`).join('');
+}
+
+function switchProj(name) {
+    saveStore();
+    curProjName = name;
+    projects = _store.projects[name].items;
+    curYear = _store.projects[name].year;
+    nid = _store.projects[name].nid;
+    document.getElementById('yrNum').textContent = curYear;
+    refreshAll();
+}
+
+function newProj() {
+    const n = prompt("輸入新專案名稱");
+    if(!n || _store.projects[n]) return alert("名稱無效或已存在");
+    _store.projects[n] = { year: THIS_YEAR, items: [], nid: 1 };
+    switchProj(n);
+}
+
+function cloneProj() {
+    const n = prompt("輸入複製後的名稱", curProjName + " (副本)");
+    if(!n || _store.projects[n]) return alert("名稱無效或已存在");
+    _store.projects[n] = JSON.parse(JSON.stringify(_store.projects[curProjName]));
+    switchProj(n);
+}
+
+function deleteProj() {
+    const keys = Object.keys(_store.projects);
+    if(keys.length <= 1) return alert("至少需保留一個專案");
+    if(!confirm(`確定刪除專案「${curProjName}」？`)) return;
+    
+    delete _store.projects[curProjName];
+    const nextProj = Object.keys(_store.projects)[0];
+    curProjName = nextProj; // 先切換變數
+    switchProj(nextProj);   // 再執行切換渲染
+}
+
+function resetToMasterTemplate() {
+    if(!confirm("確定要將當前專案內容，重置為代碼定義的最新預設計畫清單嗎？(目前的編輯內容將遺失)")) return;
+    projects = JSON.parse(JSON.stringify(MASTER_TEMPLATE));
+    nid = 10;
+    saveStore();
+    refreshAll();
+    alert("已還原至最新範本項目！");
+}
+
+// ═══════════ 渲染與甘特圖 ═══════════
+function refreshAll() {
+    renderSB();
+    genGantt();
+    renderProjSelect();
+}
+
+function renderSB() {
+    document.getElementById('sbList').innerHTML = projects.map(p => `
+        <div class="pitem ${p.checked?'active':''}" onclick="togP(${p.id})">
+            <div class="pitem-cb ${p.checked?'on':''}"></div>
+            <div style="flex:1">
+                <b>${p.name}</b><br><small style="color:#999">${p.cat}</small>
+            </div>
+            <button onclick="event.stopPropagation();delItem(${p.id})" style="border:none;background:none;cursor:pointer;">🗑</button>
+        </div>
+    `).join('');
+}
+
+function genGantt() {
+    const sel = projects.filter(p => p.checked);
+    const wrap = document.getElementById('ganttWrap');
+    if(!sel.length) { wrap.innerHTML = "<p style='padding:50px;text-align:center;color:#999;'>請勾選計畫項目</p>"; return; }
+
+    let h = `<table class="gt" id="ganttTable"><thead>
+        <tr><th class="th1" rowspan="2" style="width:140px">計畫項目</th><th class="th1" rowspan="2">說明</th><th class="th1" colspan="12">${curYear} 年度進度</th></tr>
+        <tr>${Array.from({length:12},(_,i)=>`<th class="th2" style="width:40px">${i+1}月</th>`).join('')}</tr>
+    </thead><tbody>`;
+
+    sel.forEach(p => {
+        h += `<tr><td style="font-weight:700;font-size:11px;">${p.name}</td><td style="font-size:10px;color:#666;">${p.method}</td>`;
+        for(let m=1; m<=12; m++) {
+            const has = p.months.includes(m);
+            const pg = p.prog[m] || {plan:100, done:false};
+            h += `<td class="cd-month">
+                ${has ? `<div class="mo-plan" style="width:${pg.plan}%"></div>` : ''}
+                ${pg.done ? `<div class="mo-done"></div>` : ''}
+            </td>`;
+        }
+        h += `</tr>`;
+    });
+    h += "</tbody></table>";
+    wrap.innerHTML = h;
+}
+
+// ═══════════ PDF 匯出 (優化版) ═══════════
+async function exportPDF() {
+    const btn = document.getElementById('pdfBtn');
+    btn.textContent = '⏳ 處理中...';
+    btn.disabled = true;
+
+    try {
+        const title = document.getElementById('mainTitle').textContent;
+        const gantt = document.getElementById('ganttTable');
+        
+        // 建立 PDF 專用隱藏容器
+        const container = document.createElement('div');
+        container.style.cssText = "position:absolute;top:-9999px;width:1100px;background:white;padding:30px;font-family:sans-serif;";
+        
+        // 1. 標題 (移除年度)
+        const header = document.createElement('div');
+        header.style.cssText = "text-align:center;border-bottom:2.5px solid #2c4a62;padding-bottom:15px;margin-bottom:20px;";
+        header.innerHTML = `<h1 style="font-size:24px;color:#2c4a62;margin:0;">${title}</h1>
+                            <p style="font-size:12px;color:#666;margin-top:8px;">專案：${curProjName}</p>`;
+        container.appendChild(header);
+
+        // 2. 表格內容
+        const tableClone = gantt.cloneNode(true);
+        tableClone.style.width = "100%";
+        container.appendChild(tableClone);
+
+        // 3. 右下角日期
+        const footer = document.createElement('div');
+        footer.style.cssText = "text-align:right;margin-top:20px;font-size:11px;color:#888;";
+        footer.textContent = `列印日期：${new Date().toLocaleDateString('zh-TW')}`;
+        container.appendChild(footer);
+
+        document.body.appendChild(container);
+        const canvas = await html2canvas(container, { scale: 2 });
+        document.body.removeChild(container);
+
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('l', 'mm', 'a4');
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
+        pdf.addImage(imgData, 'JPEG', 10, 10, 277, (canvas.height * 277) / canvas.width);
+        pdf.save(`${title}.pdf`);
+    } catch(e) { alert("PDF 匯出失敗"); console.error(e); }
+    
+    btn.textContent = '📄 匯出 PDF';
+    btn.disabled = false;
+}
+
+// ═══════════ 輔助功能 ═══════════
+function chgYear(d) { curYear += d; document.getElementById('yrNum').textContent = curYear; saveStore(); genGantt(); }
+function togP(id) { const p=projects.find(x=>x.id===id); p.checked=!p.checked; saveStore(); refreshAll(); }
+function delItem(id) { if(confirm('刪除此項？')){ projects=projects.filter(x=>x.id!==id); saveStore(); refreshAll(); }}
+function discAgree() { sessionStorage.setItem('health_disc', '1'); document.getElementById('discBg').classList.remove('open'); }
+
+window.onload = () => {
+    if(!sessionStorage.getItem('health_disc')) document.getElementById('discBg').classList.add('open');
+    refreshAll();
+};
+
+function openModal() {
+    const n = prompt("輸入計畫名稱");
+    if(n) { projects.push({id:nid++, cat:'自訂', name:n, method:'手動新增', months:[1], checked:true, color:0, pers:[], prog:{}}); saveStore(); refreshAll(); }
+}
+</script>
+</body>
+</html>
